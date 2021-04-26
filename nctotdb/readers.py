@@ -120,6 +120,7 @@ class TileDBReader(Reader):
         """Produce a mapping of array name to array path irrespective of groups."""
         self.check_groups()
         all_paths = chain.from_iterable([paths for paths in self.groups.values()])
+        print(f"All paths are {all_paths}")
         arrays = {}
         for path in all_paths:
             if path.endswith('/'):
@@ -384,7 +385,10 @@ class TileDBReader(Reader):
                 except ValueError:
                     # Not all keys are varname-specific; we want all of these.
                     metadata[key] = value
-
+        print(metadata)
+        scalar_coords = metadata.pop('coordinates', '').split(' ')
+        print(group_dims)
+        aux_coords = [(group_dims[name], ()) for name in scalar_coords]
         cell_methods = parse_cell_methods(metadata.pop('cell_methods', None))
         dim_names = metadata.pop('dimensions').split(',')
         # Dim Coords And Dims (mapping of coords to cube axes).
@@ -394,6 +398,7 @@ class TileDBReader(Reader):
         std_name = metadata.pop('standard_name', None)
         long_name = metadata.pop('long_name', None)
         var_name = metadata.pop('var_name', None)
+
         if all(itm is None for itm in [std_name, long_name, var_name]):
             long_name = attr_name
 
@@ -403,6 +408,7 @@ class TileDBReader(Reader):
                     var_name=var_name,
                     units=metadata.pop('units', '1'),
                     dim_coords_and_dims=dcad,
+                    aux_coords_and_dims=aux_coords,
                     cell_methods=cell_methods,
                     attributes=safe_attrs)
         cube.coord_system = grid_mapping
@@ -433,7 +439,7 @@ class TileDBReader(Reader):
                 cubes.append(cube)
         return cubes
 
-    def _get_grid_mapping(self, data_array_path):
+    def _get_grid_mapping(self, data_array_paths):
         """
         Get the grid mapping (Iris coord_system) from the data array metadata.
         Grid mapping is stored as a JSON string in the array meta,
@@ -441,21 +447,22 @@ class TileDBReader(Reader):
 
         """
         grid_mapping = None
-        with tiledb.open(data_array_path, 'r', ctx=self.ctx) as A:
-            try:
-                grid_mapping_str = A.meta['grid_mapping']
-            except KeyError:
-                grid_mapping_str = None
-        if grid_mapping_str is not None and grid_mapping_str != 'none':
-            # Cannot write NoneType into TileDB array meta, so `'none'` is a
-            # stand-in that must be caught.
-            translator = GridMapping(grid_mapping_str)
-            try:
-                grid_mapping = translator.get_grid_mapping()
-            except Exception as e:
-                exception_type = e.__class__.__name__
-                warnings.warn(f'Re-raised as warning: {exception_type}: {e}.\nGrid mapping will be None.')
-        return grid_mapping
+        for data_array_path in data_array_paths:
+            with tiledb.open(data_array_path, 'r', ctx=self.ctx) as A:
+                try:
+                    grid_mapping_str = A.meta['grid_mapping']
+                except KeyError:
+                    grid_mapping_str = None
+            if grid_mapping_str is not None and grid_mapping_str != 'none':
+                # Cannot write NoneType into TileDB array meta, so `'none'` is a
+                # stand-in that must be caught.
+                translator = GridMapping(grid_mapping_str)
+                try:
+                    grid_mapping = translator.get_grid_mapping()
+                except Exception as e:
+                    exception_type = e.__class__.__name__
+                    warnings.warn(f'Re-raised as warning: {exception_type}: {e}.\nGrid mapping will be None.')
+            return grid_mapping
 
     def _get_arrays_and_dims(self, group_array_paths):
         """
@@ -469,6 +476,7 @@ class TileDBReader(Reader):
         """
         dim_array_paths = []
         data_array_paths = []
+        print(f"Group array paths are {group_array_paths}")
         for array_path in group_array_paths:
             with tiledb.open(array_path, 'r', ctx=self.ctx) as A:
                 metadata = {k: v for k, v in A.meta.items()}
@@ -519,7 +527,7 @@ class TileDBReader(Reader):
         cubes = []
         for group_path, group_array_paths in iter_groups.items():
             dim_paths, data_paths = self._get_arrays_and_dims(group_array_paths)
-            grid_mapping = self._get_grid_mapping(data_paths[0])
+            grid_mapping = self._get_grid_mapping(data_paths)
             group_coords = self._load_group_dims(dim_paths, grid_mapping)
             if self.data_array_name is not None:
                 group_cubes = self._load_multiattr_arrays(data_paths,
