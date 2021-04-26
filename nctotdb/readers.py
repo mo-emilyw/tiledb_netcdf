@@ -120,7 +120,6 @@ class TileDBReader(Reader):
         """Produce a mapping of array name to array path irrespective of groups."""
         self.check_groups()
         all_paths = chain.from_iterable([paths for paths in self.groups.values()])
-        print(f"All paths are {all_paths}")
         arrays = {}
         for path in all_paths:
             if path.endswith('/'):
@@ -385,9 +384,7 @@ class TileDBReader(Reader):
                 except ValueError:
                     # Not all keys are varname-specific; we want all of these.
                     metadata[key] = value
-        print(metadata)
         scalar_coords = metadata.pop('coordinates', '').split(' ')
-        print(group_dims)
         cell_methods = parse_cell_methods(metadata.pop('cell_methods', None))
         dim_names = metadata.pop('dimensions').split(',')
         aux_coords = [(group_dims[name], ()) for name in scalar_coords if name in group_dims and name not in dim_names]
@@ -476,7 +473,6 @@ class TileDBReader(Reader):
         """
         dim_array_paths = []
         data_array_paths = []
-        print(f"Group array paths are {group_array_paths}")
         for array_path in group_array_paths:
             with tiledb.open(array_path, 'r', ctx=self.ctx) as A:
                 metadata = {k: v for k, v in A.meta.items()}

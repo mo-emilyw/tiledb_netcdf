@@ -310,17 +310,14 @@ class _TDBWriter(Writer):
                     # Handle scalar coords along the append axis.
                     A.meta['coord'] = self._scalar_unlimited
                 elif var_name in self.data_model.scalar_coord_names:
-                    print(f"Writing scalar coord: {var_name}")
                     A.meta['coord'] = self.data_model.variables[var_name].name
                 else:
-                    print(f"Would be writing {var_name}")
                     # Don't know how to handle this. It might be an aux or scalar
                     # coord, but we're not currently writing TDB arrays for them.
                     pass
 
     def populate_domain_arrays(self, domain_vars, domain_name):
         """Populate all arrays with data from netcdf data vars within a tiledb group."""
-        print(f"Domain vars are {domain_vars}")
         for var_name in domain_vars:
             data_var = self.data_model.variables[var_name]
             self.populate_array(var_name, data_var, domain_name)
@@ -617,7 +614,6 @@ class TileDBWriter(_TDBWriter):
                 self._create_tdb_directory(group_dirname)
 
             tiledb.group_create(group_dirname, ctx=self.ctx)
-            print(f"Creating domain arrays {domain_coord_names} with {domain_var_names}")
             # Create and write arrays for each domain-describing coordinate.
             self.create_domain_arrays(all_domain_coord_names, domain_name, coords=True)
             self.populate_domain_arrays(all_domain_coord_names, domain_name)
@@ -803,7 +799,6 @@ class ZarrWriter(Writer):
         for var_name in var_names:
             data_var = self.data_model.variables[var_name]
             chunks = self.data_model.get_chunks(var_name)
-            print(f"Chunks are {chunks} for {var_name}")
             data_array = self.group.create_dataset(var_name,
                                                 shape=data_var.shape,
                                                 chunks=chunks,
@@ -909,7 +904,6 @@ def write_array(array_filename, data_var,
         write_indices = _array_indices(shape, start_index)
     else:
         write_indices = start_index
-    print(f"Writing array for {data_var} with start_index {start_index} and write_indices {write_indices}")
     # Write netcdf data var contents into array.
     with tiledb.open(array_filename, 'w', ctx=ctx) as A:
         A[write_indices] = data_var[...]
@@ -931,7 +925,6 @@ def write_multiattr_array(array_filename, data_vars,
     else:
         write_indices = start_index
 
-    print(f"Writing data vars {data_vars} with {start_index} and {write_indices}")
     # Check for attrs with no data.
     for name, data_var in data_vars.items():
         if data_var is None:
