@@ -645,7 +645,7 @@ class TileDBWriter(_TDBWriter):
             odm.classify_variables()
             odm.get_metadata()
             points = np.array(odm.variables[append_dim][:])
-        return points
+        return points - self_dim_stop
 
     def _get_scalar_points_and_offsets(self, others, append_dim, self_dim_stop):
         """
