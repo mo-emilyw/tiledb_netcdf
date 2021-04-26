@@ -606,7 +606,7 @@ class TileDBWriter(_TDBWriter):
         self._make_shape_domains()
         for domain_name, domain_var_names in self.domains_mapping.items():
             domain_coord_names = domain_name.split(self.domain_separator)
-            domain_coord_names.extend(self.data_model.scalar_coord_names)
+            all_domain_coord_names = domain_coord_names + self.data_model.scalar_coord_names
 
             # Create group.
             group_dirname = self.array_path.construct_path(domain_name, '')
@@ -619,8 +619,8 @@ class TileDBWriter(_TDBWriter):
             tiledb.group_create(group_dirname, ctx=self.ctx)
             print(f"Creating domain arrays {domain_coord_names} with {domain_var_names}")
             # Create and write arrays for each domain-describing coordinate.
-            self.create_domain_arrays(domain_coord_names, domain_name, coords=True)
-            self.populate_domain_arrays(domain_coord_names, domain_name)
+            self.create_domain_arrays(all_domain_coord_names, domain_name, coords=True)
+            self.populate_domain_arrays(all_domain_coord_names, domain_name)
             
             # Get data vars in this domain and create and populate a multi-attr array.
             self.create_multiattr_array(domain_var_names, domain_coord_names,
@@ -803,6 +803,7 @@ class ZarrWriter(Writer):
         for var_name in var_names:
             data_var = self.data_model.variables[var_name]
             chunks = self.data_model.get_chunks(var_name)
+            print(f"Chunks are {chunks} for {var_name}")
             data_array = self.group.create_dataset(var_name,
                                                 shape=data_var.shape,
                                                 chunks=chunks,
@@ -908,7 +909,7 @@ def write_array(array_filename, data_var,
         write_indices = _array_indices(shape, start_index)
     else:
         write_indices = start_index
-
+    print(f"Writing array for {data_var} with start_index {start_index} and write_indices {write_indices}")
     # Write netcdf data var contents into array.
     with tiledb.open(array_filename, 'w', ctx=ctx) as A:
         A[write_indices] = data_var[...]

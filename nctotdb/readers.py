@@ -388,9 +388,9 @@ class TileDBReader(Reader):
         print(metadata)
         scalar_coords = metadata.pop('coordinates', '').split(' ')
         print(group_dims)
-        aux_coords = [(group_dims[name], ()) for name in scalar_coords]
         cell_methods = parse_cell_methods(metadata.pop('cell_methods', None))
         dim_names = metadata.pop('dimensions').split(',')
+        aux_coords = [(group_dims[name], ()) for name in scalar_coords if name in group_dims and name not in dim_names]
         # Dim Coords And Dims (mapping of coords to cube axes).
         dcad = [(group_dims[name], i) for i, name in enumerate(dim_names)]
         safe_attrs = self._handle_attributes(metadata,
@@ -411,7 +411,7 @@ class TileDBReader(Reader):
                     aux_coords_and_dims=aux_coords,
                     cell_methods=cell_methods,
                     attributes=safe_attrs)
-        cube.coord_system = grid_mapping
+        cube.coord_system(type(grid_mapping).__name__)
         return cube
 
     def _load_group_arrays(self, data_paths, group_dims, grid_mapping, handle_nan=None):
@@ -527,7 +527,7 @@ class TileDBReader(Reader):
         cubes = []
         for group_path, group_array_paths in iter_groups.items():
             dim_paths, data_paths = self._get_arrays_and_dims(group_array_paths)
-            grid_mapping = self._get_grid_mapping(data_paths)
+            grid_mapping = self._get_grid_mapping([data_paths[0]])
             group_coords = self._load_group_dims(dim_paths, grid_mapping)
             if self.data_array_name is not None:
                 group_cubes = self._load_multiattr_arrays(data_paths,
