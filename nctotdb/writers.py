@@ -720,9 +720,12 @@ class TileDBWriter(_TDBWriter):
             if baseline is None:
                 raise ValueError('Cannot determine scalar step without a baseline dataset.')
             self_ind_stop = 0
-            self_dim_stop = self_dim_points[0]
-            offsets = self._get_scalar_offset(baseline, append_dim, self_dim_stop)
+            self_dim_stop = int(self_dim_points[0])
+            # offsets = self._get_scalar_offset(baseline, append_dim, self_dim_stop)
             # offsets = self._get_scalar_points_and_offsets(others, append_dim, self_dim_stop)
+            offsets = [self_dim_stop * (ind + 1) for ind in range(0, len(others))]
+            if np.isscalar(offsets):
+                offsets = [int(offsets)]
             if len(offsets) == 1:
                 self_step = offsets[0]
             else:
@@ -971,7 +974,7 @@ def _dim_offsets(dim_points, self_stop_ind, self_stop, self_step,
 
     if points_offset is None:
         points_offset = other_start - self_stop
-    inds_offset = int(points_offset / self_step) + self_stop_ind
+    inds_offset = int(points_offset / max(self_step, 1)) + self_stop_ind
 
     i_start, _ = _dim_inds(dim_points, spatial_inds, inds_offset)
     return i_start
@@ -999,12 +1002,15 @@ def _make_multiattr_tile(other_data_model, domain_path, data_array_name,
     """Process appending a single tile to `self`, per domain."""
     other_data_vars = {}
     for hashed_name in var_names:
-        result = other_data_model.data_vars_mapping.get(hashed_name, None)
-        if result is not None:
-            data_var_name = result[1]
-            other_data_vars[hashed_name] = other_data_model.variables[data_var_name]
+        if other_data_model.data_vars_mapping is not None:
+            result = other_data_model.data_vars_mapping.get(hashed_name, None)
+            if result is not None:
+                data_var_name = result[1]
+                other_data_vars[hashed_name] = other_data_model.variables[data_var_name]
+            else:
+                other_data_vars[hashed_name] = None
         else:
-            other_data_vars[hashed_name] = None
+            other_data_vars[hashed_name] = other_data_model.variables[hashed_name]
 
     # Raise an error if no match in data vars between existing array and other_data_model.
     if len(list(other_data_vars.keys())) == 0:
@@ -1012,7 +1018,7 @@ def _make_multiattr_tile(other_data_model, domain_path, data_array_name,
         raise KeyError(emsg.format(', '.join(other_data_model.data_var_names)))
 
     zeroth_data_var = list(other_data_vars.keys())[0]
-    data_var_shape  = other_data_vars[zeroth_data_var].shape
+    data_var_shape = other_data_vars[zeroth_data_var].shape
     other_dim_var = other_data_model.variables[append_dim]
     other_dim_points = np.atleast_1d(other_dim_var[:])
 
@@ -1021,7 +1027,7 @@ def _make_multiattr_tile(other_data_model, domain_path, data_array_name,
         scalar_coord = True
 
     if scalar_coord:
-        shape = [1] + list(data_var_shape)
+        shape = (1,) + data_var_shape
     else:
         shape = data_var_shape
 
