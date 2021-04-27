@@ -541,7 +541,7 @@ class TileDBReader(Reader):
 
     def to_xarray(self, names=None):
         intermediate = self.to_iris(names=names)
-        self.artifact = xr.from_iris(intermediate)
+        self.artifact = xr.DataArray.from_iris(intermediate)
         return self.artifact
 
 

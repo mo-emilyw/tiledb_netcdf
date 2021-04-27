@@ -687,7 +687,7 @@ class TileDBWriter(_TDBWriter):
 
     def append(self, others, append_dim, data_array_name,
                baseline=None, group=False, logfile=None, parallel=False,
-               verbose=False, consolidate=True):
+               verbose=False, consolidate=True, offsets=None):
         """
         Append extra data as described by the contents of `others` onto
         an existing TileDB array along the axis defined by `append_dim`.
@@ -723,7 +723,8 @@ class TileDBWriter(_TDBWriter):
             self_dim_stop = int(self_dim_points[0])
             # offsets = self._get_scalar_offset(baseline, append_dim, self_dim_stop)
             # offsets = self._get_scalar_points_and_offsets(others, append_dim, self_dim_stop)
-            offsets = [self_dim_stop * (ind + 1) for ind in range(0, len(others))]
+            if not offsets:
+                offsets = [self_dim_stop * (ind + 1) for ind in range(0, len(others))]
             if np.isscalar(offsets):
                 offsets = [int(offsets)]
             if len(offsets) == 1:
@@ -898,6 +899,7 @@ def _array_indices(shape, start_index):
 def write_array(array_filename, data_var,
                 start_index=None, scalar=False, ctx=None):
     """Write to the array."""
+    print(f"Writing array at start index {start_index}")
     if start_index is None:
         start_index = 0
         if scalar:
