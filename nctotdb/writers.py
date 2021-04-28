@@ -728,7 +728,7 @@ class TileDBWriter(_TDBWriter):
             if np.isscalar(offsets):
                 offsets = [int(offsets)]
             if len(offsets) == 1:
-                self_step = offsets[0]
+                self_step = self_dim_stop
             else:
                 # Smooth out any noise in slightly different offsets.
                 self_step = np.median(np.diff(offsets))
@@ -976,7 +976,7 @@ def _dim_offsets(dim_points, self_stop_ind, self_stop, self_step,
 
     if points_offset is None:
         points_offset = other_start - self_stop
-    inds_offset = int(points_offset / max(self_step, 1)) + self_stop_ind
+    inds_offset = int(points_offset / self_step) + self_stop_ind
 
     i_start, _ = _dim_inds(dim_points, spatial_inds, inds_offset)
     return i_start
