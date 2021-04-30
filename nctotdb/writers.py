@@ -555,6 +555,8 @@ class TileDBWriter(_TDBWriter):
             with tiledb.open(array_filename, 'w', ctx=self.ctx) as A:
                 # Set tiledb metadata from data var ncattrs.
                 for key, value in multi_attr_metadata.items():
+                    if isinstance(value, np.int64):
+                        value = int(value)
                     A.meta[key] = value
                 # A data array gets a `dataset` key in the metadata dictionary,
                 # which defines all the data variables in it.
@@ -922,6 +924,7 @@ def write_multiattr_array(array_filename, data_vars,
     shape = data_vars[zeroth_key].shape  # All data vars *must* have the same shape for writing...
     if scalar:
         shape = (1,) + shape
+    print(f"Data shape is {shape}")
 
     # Get write indices.
     if start_index is None:
